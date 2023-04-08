@@ -25,15 +25,17 @@ WiFiUDP Udp;
 
 /** Motor Driver **/
 Stepper spiceMotor(100, 2, 3, 4, 5); // red, blue, green, black
-bool startMovement = false;
-int stepsLeft;
+volatile bool motor_moving;
+int steps_left;
 /** **/
 
 ISR(TCB0_INT_vect) {
-  if (buffer_counter < SOUND_BUFFER_SIZE && !(ADC0.COMMAND & ADC_STCONV_bm)) {
-    sound_buffer[active_buffer][buffer_counter] = ADC0.RES;
-    ADC0.COMMAND = ADC_STCONV_bm;
-    buffer_counter++;
+  if (!motor_moving) {
+    if (buffer_counter < SOUND_BUFFER_SIZE && !(ADC0.COMMAND & ADC_STCONV_bm)) {
+      sound_buffer[active_buffer][buffer_counter] = ADC0.RES;
+      ADC0.COMMAND = ADC_STCONV_bm;
+      buffer_counter++;
+    }
   }
   TCB0.INTFLAGS = TCB_CAPT_bm;
 }
@@ -64,8 +66,7 @@ void setup() {
   Serial.begin(9600);
   buffer_counter = 0;
   active_buffer = 0;
-  stepsLeft = 0;
-  currentSteps = 0;
+  motor_moving = false;
 
   /** Interrupt Handler setup **/
   cli();
@@ -87,7 +88,7 @@ void setup() {
   /** **/
   
   /** Motor Setup **/
-  spiceMotor.setSpeed(500);
+  spiceMotor.setSpeed(50);
   /** **/
 }
 
@@ -101,8 +102,8 @@ void loop() {
     char* packetBuffer = (char*)tempBuffer;
 
     active_buffer = (active_buffer == 0) ? 1 : 0;
+
     interrupts();
-    /** **/
 
     /** Begin data transfer on now inactive buffer **/
     Udp.beginPacket(remoteIP, remotePort);
@@ -111,17 +112,18 @@ void loop() {
     /** **/
   }
 
-  if (Udp.read(readBuffer, readBufferSize) > 0) { // if we get a message from the server
-    noInterrupts();
-    startMovement = true;
-    stepsLeft = 100;
-    interrupts();
-  }
+  if (Udp.parsePacket() != 0) { // if we get a message from the server
+    Udp.read(readBuffer, readBufferSize);
+    Serial.println(readBuffer);
 
-  if (startMovement) {
     noInterrupts();
-    spiceMotor.step(1);
-    stepsLeft--;
+    motor_moving = true;
+    interrupts();
+
+    spiceMotor.step(100);
+
+    noInterrupts();
+    motor_moving = false;
     interrupts();
   }
 }

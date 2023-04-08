@@ -4,6 +4,7 @@ import wifiutils
 
 localIP     = wifiutils.ip
 localPort   = wifiutils.port
+clientPort = wifiutils.clientPort
 
 bufferSize  = 400
 unpackString = '<' + ''.join(['h' for a in range(bufferSize)])
@@ -21,3 +22,10 @@ while(True):
 
     if (len(data) == bufferSize * 2):
         soundData = struct.unpack(unpackString, data)
+        print(soundData)
+        total = sum(soundData)
+
+        if (total > 210000):
+            print("total up")
+            print(addr)
+            UDPServerSocket.sendto(str.encode('hello'), addr)
