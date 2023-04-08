@@ -1,11 +1,6 @@
 import socket
 import struct
-import time
 import wifiutils
-
-import matplotlib.pyplot as plt
-from scipy.fft import fft, fftfreq
-import numpy as np
 
 localIP     = wifiutils.ip
 localPort   = wifiutils.port
@@ -26,4 +21,3 @@ while(True):
 
     if (len(data) == bufferSize * 2):
         soundData = struct.unpack(unpackString, data)
-        print(soundData)

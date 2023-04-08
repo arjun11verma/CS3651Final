@@ -2,6 +2,7 @@
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
 #include <wifistuff.h>
+#include <Stepper.h>
 
 /** Audio Sampling **/
 #define SOUND_BUFFER_SIZE 400
@@ -17,7 +18,15 @@ char ssid[] = MYSSID;    // network SSID (name)
 char pass[] = MYPASS;    // network password (use for WPA, or use as key for WEP)
 unsigned int localPort = remotePORT - 1;
 uint16_t remotePort = remotePORT;
+const size_t readBufferSize = 8;
+char readBuffer[readBufferSize];
 WiFiUDP Udp;
+/** **/
+
+/** Motor Driver **/
+Stepper spiceMotor(100, 2, 3, 4, 5); // red, blue, green, black
+bool startMovement = false;
+int stepsLeft;
 /** **/
 
 ISR(TCB0_INT_vect) {
@@ -55,6 +64,8 @@ void setup() {
   Serial.begin(9600);
   buffer_counter = 0;
   active_buffer = 0;
+  stepsLeft = 0;
+  currentSteps = 0;
 
   /** Interrupt Handler setup **/
   cli();
@@ -73,6 +84,10 @@ void setup() {
 
   /** Wifi Setup **/
   WifiSetup();
+  /** **/
+  
+  /** Motor Setup **/
+  spiceMotor.setSpeed(500);
   /** **/
 }
 
@@ -94,5 +109,19 @@ void loop() {
     Udp.write(packetBuffer, SOUND_BUFFER_SIZE * sizeof(int16_t));
     Udp.endPacket();
     /** **/
+  }
+
+  if (Udp.read(readBuffer, readBufferSize) > 0) { // if we get a message from the server
+    noInterrupts();
+    startMovement = true;
+    stepsLeft = 100;
+    interrupts();
+  }
+
+  if (startMovement) {
+    noInterrupts();
+    spiceMotor.step(1);
+    stepsLeft--;
+    interrupts();
   }
 }
