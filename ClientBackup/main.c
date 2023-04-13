@@ -29,6 +29,10 @@ volatile bool motor_moving;
 int steps_left;
 /** **/
 
+/** Temp/Random **/
+unsigned long timet;
+/** **/
+
 ISR(TCB0_INT_vect) {
   if (!motor_moving) {
     if (buffer_counter < SOUND_BUFFER_SIZE && !(ADC0.COMMAND & ADC_STCONV_bm)) {
@@ -70,10 +74,14 @@ void setup() {
 
   /** Interrupt Handler setup **/
   cli();
+  CLKCTRL.OSC20MCTRLA = CLKCTRL_RUNSTDBY_bm;
+  CLKCTRL.MCLKCTRLA = CLKCTRL_CLKOUT_bm | CLKCTRL_CLKSEL_OSC20M_gc;
+  CLKCTRL.MCLKCTRLB = 0;
+
   TCB0.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
-  TCB0.CCMP = 31; // Value to compare with - 250 khz divided by this value, 31 for ~8000 Hz
+  TCB0.CCMP = 2000; // Value to compare with - 16 mhz divided by this value is 8 khz
   TCB0.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
-  TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
+  TCB0.CTRLA = TCB_CLKSEL_CLKDIV1_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
   sei();
   /** **/
 
@@ -89,6 +97,10 @@ void setup() {
   
   /** Motor Setup **/
   spiceMotor.setSpeed(50);
+  /** **/
+
+  /** Temp/Random **/
+  timet = millis();
   /** **/
 }
 
