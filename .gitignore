@@ -1,1 +1,7 @@
 wifiutils.py
+DATA
+__pycache__
+__pycache__/*
+__pycache__/speechrec.cpython-39.pyc
+__pycache__/wifiutils.cpython-39.pyc
+speechmodel.pt

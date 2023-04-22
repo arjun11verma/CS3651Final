@@ -27,11 +27,53 @@ WiFiUDP Udp;
 Stepper spiceMotor(100, 2, 3, 4, 5); // red, blue, green, black
 volatile bool motor_moving;
 int steps_left;
+
+#define FULL_ROTATION 1510
+const int SPICE_MOVEMENT = (FULL_ROTATION / 8);
+
+enum Spices {
+  BASIL,
+  CUMIN,
+  THYME,
+  MINT,
+  SALT,
+  CHILI,
+  DILL,
+  MACE
+};
+
+int currentPosition = BASIL;
 /** **/
 
 /** Temp/Random **/
 unsigned long timet;
 /** **/
+
+void moveTo(int newPosition) {
+  noInterrupts();
+  motor_moving = true;
+  interrupts();
+
+  int toMove = 0;
+  if (newPosition > currentPosition) {
+    toMove = newPosition - currentPosition;
+  } else {
+    toMove = newPosition + 8 - currentPosition;
+  }
+  toMove = toMove  * SPICE_MOVEMENT;
+
+  if (toMove == SPICE_MOVEMENT) {
+    toMove += 20;
+  }
+  
+
+  spiceMotor.step(toMove);
+  currentPosition = newPosition;
+
+  noInterrupts();
+  motor_moving = false;
+  interrupts();
+}
 
 ISR(TCB0_INT_vect) {
   if (!motor_moving) {
@@ -96,7 +138,7 @@ void setup() {
   /** **/
   
   /** Motor Setup **/
-  spiceMotor.setSpeed(50);
+  spiceMotor.setSpeed(150);
   /** **/
 
   /** Temp/Random **/
@@ -126,16 +168,10 @@ void loop() {
 
   if (Udp.parsePacket() != 0) { // if we get a message from the server
     Udp.read(readBuffer, readBufferSize);
-    Serial.println(readBuffer);
+    int spiceValue = atoi(readBuffer);
 
-    noInterrupts();
-    motor_moving = true;
-    interrupts();
+    Serial.println(spiceValue);
 
-    spiceMotor.step(100);
-
-    noInterrupts();
-    motor_moving = false;
-    interrupts();
+    moveTo(spiceValue);
   }
 }
